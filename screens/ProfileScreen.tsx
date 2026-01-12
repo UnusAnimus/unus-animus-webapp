@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import type { Language, UserProgress } from '../types';
+import type { AuthUser, Language, UserProgress } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ProgressBar } from '../components/ui/ProgressBar';
@@ -12,6 +12,8 @@ type ProfileScreenProps = {
   onToggleLanguage: () => void;
   onToggleTheme: () => void;
   onReset: () => void;
+  authUser?: AuthUser | null;
+  onLogout?: () => void;
 };
 
 export function ProfileScreen({
@@ -20,6 +22,8 @@ export function ProfileScreen({
   onToggleLanguage,
   onToggleTheme,
   onReset,
+  authUser,
+  onLogout,
 }: ProfileScreenProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -90,6 +94,39 @@ export function ProfileScreen({
         <div className="mt-4">
           <ProgressBar value={progressPercent} />
         </div>
+      </Card>
+
+      <Card className="p-4">
+        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {language === 'de' ? 'Mitgliedschaft' : 'Membership'}
+        </div>
+        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {authUser?.email ? (
+            <div>{authUser.email}</div>
+          ) : (
+            <div>{language === 'de' ? 'Eingeloggt.' : 'Signed in.'}</div>
+          )}
+          {authUser?.roles?.length ? (
+            <div className="mt-1">
+              {language === 'de' ? 'Rollen' : 'Roles'}: {authUser.roles.join(', ')}
+            </div>
+          ) : null}
+        </div>
+
+        {onLogout && (
+          <div className="mt-4">
+            <Button
+              variant="soft"
+              onClick={() => {
+                const ok = window.confirm(language === 'de' ? 'Abmelden?' : 'Log out?');
+                if (!ok) return;
+                onLogout();
+              }}
+            >
+              {language === 'de' ? 'Abmelden' : 'Log out'}
+            </Button>
+          </div>
+        )}
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2">

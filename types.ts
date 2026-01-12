@@ -49,6 +49,15 @@ export interface Course {
 export type Language = 'de' | 'en';
 export type Theme = 'light' | 'dark';
 
+export type AuthRole = 'member' | 'admin' | 'editor';
+
+export type AuthUser = {
+  wpUserId: string;
+  email?: string;
+  name?: string;
+  roles: AuthRole[];
+};
+
 export interface PracticeExerciseStats {
   seenCount: number;
   correctCount: number;

@@ -1,4 +1,5 @@
 import type { Language } from '../types';
+import { getAuthToken } from '../utils/authStorage';
 
 export type ReflectionFeedback = {
   score: number;
@@ -25,9 +26,13 @@ export const evaluateReflectionViaProxy = async (
 
   let res: Response;
   try {
+    const token = getAuthToken();
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ prompt, userAnswer, language }),
       signal: controller.signal,
     });

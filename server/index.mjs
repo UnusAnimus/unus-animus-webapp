@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createPublicKey } from 'node:crypto';
 import dotenv from 'dotenv';
+import { jwtVerify } from 'jose';
 import { GoogleGenAI, Type } from '@google/genai';
 
 // Load env vars from project root. Keep keys out of the frontend bundle.
@@ -21,14 +23,100 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
+// Auth (WordPress JWT)
+const WP_JWT_SECRET = process.env.WP_JWT_SECRET;
+const WP_JWT_PUBLIC_KEY = process.env.WP_JWT_PUBLIC_KEY;
+const WP_JWT_ISSUER = process.env.WP_JWT_ISSUER;
+const WP_JWT_AUDIENCE = process.env.WP_JWT_AUDIENCE;
+
+const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const app = express();
 app.use(express.json({ limit: '1mb' }));
+const isAllowedOrigin = origin => {
+  if (!origin) return true;
+  if (/^http:\/\/localhost:\d+$/.test(origin)) return true;
+  if (/^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) return true;
+  if (FRONTEND_ORIGINS.includes(origin)) return true;
+  return false;
+};
+
 app.use(
   cors({
-    origin: [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/],
+    origin: (origin, cb) => {
+      if (isAllowedOrigin(origin)) return cb(null, true);
+      return cb(new Error('CORS blocked'), false);
+    },
     credentials: false,
   })
 );
+
+const parseBearerToken = req => {
+  const header = req.headers?.authorization;
+  if (typeof header === 'string') {
+    const match = header.match(/^Bearer\s+(.+)$/i);
+    if (match?.[1]) return match[1].trim();
+  }
+  if (req.body?.token && typeof req.body.token === 'string') return req.body.token.trim();
+  return null;
+};
+
+const normalizeRoles = rawRoles => {
+  const list = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : [];
+  const roles = new Set();
+  for (const r of list) {
+    if (!r) continue;
+    const v = String(r).toLowerCase();
+    if (v.includes('admin') || v === 'administrator') roles.add('admin');
+    if (v.includes('editor') || v.includes('redaktion')) roles.add('editor');
+    if (v.includes('member') || v === 'subscriber' || v.includes('mitglied')) roles.add('member');
+  }
+  return Array.from(roles);
+};
+
+const verifyWordpressJwt = async token => {
+  if (!token) throw new Error('missing_token');
+
+  let key;
+  let algorithms;
+
+  if (WP_JWT_PUBLIC_KEY) {
+    key = createPublicKey(WP_JWT_PUBLIC_KEY);
+    algorithms = ['RS256', 'RS384', 'RS512'];
+  } else if (WP_JWT_SECRET) {
+    key = new TextEncoder().encode(WP_JWT_SECRET);
+    algorithms = ['HS256', 'HS384', 'HS512'];
+  } else {
+    throw new Error('missing_jwt_key');
+  }
+
+  const { payload } = await jwtVerify(token, key, {
+    algorithms,
+    issuer: WP_JWT_ISSUER || undefined,
+    audience: WP_JWT_AUDIENCE || undefined,
+  });
+
+  const rawRoles = payload.roles ?? payload.role ?? payload.wp_roles ?? payload.user_roles;
+  const roles = normalizeRoles(rawRoles);
+
+  const wpUserId =
+    String(payload.sub ?? payload.wp_user_id ?? payload.user_id ?? payload.id ?? '').trim() || null;
+  if (!wpUserId) throw new Error('missing_user');
+
+  const email = payload.email ?? payload.user_email;
+  const name = payload.name ?? payload.user_display_name ?? payload.display_name;
+
+  return {
+    wpUserId,
+    email: typeof email === 'string' ? email : undefined,
+    name: typeof name === 'string' ? name : undefined,
+    roles,
+    exp: typeof payload.exp === 'number' ? payload.exp : undefined,
+  };
+};
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
@@ -46,6 +134,39 @@ app.get('/info', (_req, res) => {
           ? 'gemini-3-flash-preview'
           : null,
   });
+});
+
+// --- AUTH ---
+
+app.post('/auth/verify', async (req, res) => {
+  const token = parseBearerToken(req);
+
+  if (!token) {
+    return res.status(400).json({ ok: false, error: 'missing_token' });
+  }
+
+  try {
+    const user = await verifyWordpressJwt(token);
+    const allowed =
+      user.roles.includes('member') ||
+      user.roles.includes('admin') ||
+      user.roles.includes('editor');
+    if (!allowed) {
+      return res
+        .status(403)
+        .json({ ok: false, error: 'not_a_member', user: { ...user, roles: user.roles } });
+    }
+
+    return res.json({
+      ok: true,
+      user: { wpUserId: user.wpUserId, email: user.email, name: user.name, roles: user.roles },
+      exp: user.exp,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'invalid_token';
+    const status = msg === 'missing_jwt_key' ? 500 : msg === 'missing_token' ? 400 : 401;
+    return res.status(status).json({ ok: false, error: msg });
+  }
 });
 
 const SYSTEM_INSTRUCTION_BASE = `
@@ -146,6 +267,27 @@ const simulateEvaluation = (text, language) => {
 };
 
 app.post('/api/evaluate-reflection', async (req, res) => {
+  // If JWT auth is configured, require a valid member token.
+  const authConfigured = Boolean(WP_JWT_SECRET || WP_JWT_PUBLIC_KEY);
+  if (authConfigured) {
+    const token = parseBearerToken(req);
+    if (!token) {
+      return res.status(401).json({ error: 'missing_token' });
+    }
+    try {
+      const user = await verifyWordpressJwt(token);
+      const allowed =
+        user.roles.includes('member') ||
+        user.roles.includes('admin') ||
+        user.roles.includes('editor');
+      if (!allowed) {
+        return res.status(403).json({ error: 'not_a_member' });
+      }
+    } catch {
+      return res.status(401).json({ error: 'invalid_token' });
+    }
+  }
+
   const { prompt, userAnswer, language } = req.body || {};
 
   if (!prompt || !userAnswer || !language) {

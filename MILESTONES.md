@@ -45,6 +45,19 @@ This file is the working checklist for the project.
 - [ ] Logout + token refresh.
 - [ ] Roles at minimum: `member`, `admin`.
 
+### Env checklist
+
+- [ ] Set `WP_JWT_SECRET` (HS256) **or** `WP_JWT_PUBLIC_KEY` (RS256) on the server.
+- [ ] Optionally set `WP_JWT_ISSUER` / `WP_JWT_AUDIENCE` to harden verification.
+- [ ] Set `FRONTEND_ORIGINS` in production (CORS).
+- [ ] (Frontend) Set `VITE_WP_SSO_URL` to start SSO login.
+
+### Acceptance criteria
+
+- [ ] Without token: app shows login screen (no content screens).
+- [ ] With valid member token: app loads normally.
+- [ ] With non-member token: access denied.
+
 ## Milestone 2 — Progress & Gamification server-side (1–2 Wochen)
 
 - [ ] Choose DB (Supabase/Neon/Postgres).

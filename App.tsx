@@ -9,7 +9,17 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { LessonScreen } from './screens/LessonScreen';
 import { PracticeScreen } from './screens/PracticeScreen';
 import { TodayScreen } from './screens/TodayScreen';
+import { AuthScreen } from './screens/AuthScreen';
 import { t } from './utils/translations';
+import type { AuthUser } from './types';
+import {
+  clearAuthToken,
+  getAuthToken,
+  setAuthToken,
+  setCachedAuthUser,
+  getCachedAuthUser,
+} from './utils/authStorage';
+import { verifyAuthToken } from './services/authProxy';
 
 enum Screen {
   HOME = 'HOME',
@@ -45,6 +55,12 @@ const tabToScreen = (tab: TabKey): Screen => {
 };
 
 export default function App() {
+  const [authStatus, setAuthStatus] = useState<'checking' | 'anon' | 'authed'>('checking');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => getCachedAuthUser());
+  const [authExp, setAuthExp] = useState<number | undefined>(undefined);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authWorking, setAuthWorking] = useState(false);
+
   const [screen, setScreen] = useState<Screen>(Screen.HOME);
   const [userProgress, setUserProgress] = useState<UserProgress>(loadProgress());
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
@@ -59,6 +75,74 @@ export default function App() {
   useEffect(() => {
     saveProgress(userProgress);
   }, [userProgress]);
+
+  const logout = () => {
+    clearAuthToken();
+    setAuthUser(null);
+    setAuthExp(undefined);
+    setAuthStatus('anon');
+  };
+
+  const verifyAndSetAuth = async (token: string) => {
+    setAuthWorking(true);
+    setAuthError(null);
+    try {
+      const { user, exp } = await verifyAuthToken(token);
+      setAuthUser(user);
+      setCachedAuthUser(user);
+      setAuthExp(exp);
+      setAuthStatus('authed');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'auth_failed';
+      clearAuthToken();
+      setAuthUser(null);
+      setAuthExp(undefined);
+      setAuthStatus('anon');
+      setAuthError(message);
+    } finally {
+      setAuthWorking(false);
+    }
+  };
+
+  // Initial auth boot (token from URL or local storage)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+
+    if (urlToken) {
+      setAuthToken(urlToken);
+      params.delete('token');
+      const qs = params.toString();
+      const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+    }
+
+    const token = urlToken ?? getAuthToken();
+    if (token) {
+      void verifyAndSetAuth(token);
+    } else {
+      setAuthStatus('anon');
+    }
+  }, []);
+
+  // Token refresh / re-verify shortly before exp
+  useEffect(() => {
+    if (authStatus !== 'authed') return;
+    if (!authExp) return;
+
+    const msUntilReverify = authExp * 1000 - Date.now() - 60_000;
+    if (msUntilReverify <= 0) {
+      logout();
+      return;
+    }
+
+    const id = window.setTimeout(() => {
+      const token = getAuthToken();
+      if (token) void verifyAndSetAuth(token);
+    }, msUntilReverify);
+
+    return () => window.clearTimeout(id);
+  }, [authStatus, authExp]);
 
   // Sync effect for Dark Mode
   useEffect(() => {
@@ -221,6 +305,33 @@ export default function App() {
 
   // --- VIEWS ---
 
+  if (authStatus === 'checking') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white px-4 py-10 text-slate-900 dark:from-slate-950 dark:to-slate-950 dark:text-slate-100">
+        <div className="mx-auto max-w-md text-center">
+          <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            Checking access
+          </div>
+          <div className="mt-2 font-serif text-3xl font-bold">Kybalion Path</div>
+          <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">Authentifizierung…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStatus === 'anon') {
+    return (
+      <AuthScreen
+        error={authError}
+        isWorking={authWorking}
+        onSubmitToken={token => {
+          setAuthToken(token);
+          void verifyAndSetAuth(token);
+        }}
+      />
+    );
+  }
+
   if (screen === Screen.LESSON && activeLesson) {
     return (
       <LessonScreen
@@ -340,6 +451,8 @@ export default function App() {
               localStorage.clear();
               window.location.reload();
             }}
+            authUser={authUser}
+            onLogout={logout}
           />
         )}
       </AppShell>

@@ -50,11 +50,24 @@ Defined via `.env.local` or host environment variables.
 - `GEMINI_API_KEY`: fallback if no OpenAI key is set
 - `PORT`: proxy port (default `8787`)
 
+### WordPress JWT SSO (members-only)
+
+If you configure WordPress JWT env vars, the app becomes **members-only** and the backend will require a valid token.
+
+- `WP_JWT_SECRET`: HMAC secret for HS256 tokens (server-side)
+- `WP_JWT_PUBLIC_KEY`: public key PEM for RS256 tokens (server-side)
+- `WP_JWT_ISSUER`: optional JWT issuer check
+- `WP_JWT_AUDIENCE`: optional JWT audience check
+- `FRONTEND_ORIGINS`: comma-separated list of allowed frontend origins for CORS (localhost is always allowed in dev)
+
 ### Frontend (Vite)
 
 - `VITE_AI_PROXY_URL`: optional base URL for the AI proxy.
   - Default: `http://localhost:8787`
   - Example (production): `https://api.example.com`
+
+- `VITE_WP_SSO_URL`: optional URL to start the WordPress SSO flow.
+  - Expected behavior: redirects back to the app with `?token=...` (JWT)
 
 ### Windows: start script
 
