@@ -1,0 +1,33 @@
+import { 
+  Heart, 
+  Flame, 
+  Gem, 
+  Home, 
+  BookOpen, 
+  User, 
+  CheckCircle, 
+  Lock, 
+  Star,
+  ChevronRight,
+  RefreshCw,
+  X,
+  Sun,
+  Moon
+} from 'lucide-react';
+
+export {
+  Heart, 
+  Flame, 
+  Gem, 
+  Home, 
+  BookOpen, 
+  User, 
+  CheckCircle, 
+  Lock, 
+  Star,
+  ChevronRight,
+  RefreshCw,
+  X,
+  Sun,
+  Moon
+};

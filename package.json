@@ -1,0 +1,28 @@
+{
+  "name": "kybalion-path",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:full": "concurrently -k -n web,ai -c cyan,magenta \"vite --host :: --port 3000\" \"node server/index.mjs\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "@google/genai": "^1.35.0",
+    "lucide-react": "^0.562.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
+}
