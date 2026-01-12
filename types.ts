@@ -4,7 +4,7 @@ export enum ExerciseType {
   SORTING = 'SORTING',
   CLOZE = 'CLOZE',
   SCENARIO = 'SCENARIO',
-  REFLECTION = 'REFLECTION'
+  REFLECTION = 'REFLECTION',
 }
 
 export interface Exercise {
@@ -80,10 +80,13 @@ export interface UserProgress {
   xp: number;
   gems: number;
   lastActiveDate: string | null; // ISO Date string
-  completedLessons: Record<string, {
-    score: number;
-    completedAt: string;
-  }>;
+  completedLessons: Record<
+    string,
+    {
+      score: number;
+      completedAt: string;
+    }
+  >;
   unlockedUnits: string[]; // IDs of unlocked units
   currentUnitId: string;
   currentLessonId: string;

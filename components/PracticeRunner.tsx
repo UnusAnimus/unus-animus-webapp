@@ -23,11 +23,8 @@ interface PracticeRunnerProps {
   onComplete: (payload: PracticeCompletePayload) => void;
 }
 
-const pickPracticeExercises = (
-  course: Course,
-  progress: UserProgress,
-  language: Language
-) => generateLocalPracticeExercises(course, progress, language, 7);
+const pickPracticeExercises = (course: Course, progress: UserProgress, language: Language) =>
+  generateLocalPracticeExercises(course, progress, language, 7);
 
 const toBooleanAnswer = (answer: unknown, language: Language): boolean | null => {
   if (typeof answer === 'boolean') return answer;
@@ -53,7 +50,7 @@ export const PracticeRunner: React.FC<PracticeRunnerProps> = ({
   userProgress,
   language,
   onExit,
-  onComplete
+  onComplete,
 }) => {
   const exercises = useMemo(
     () => pickPracticeExercises(course, userProgress, language),
@@ -94,12 +91,13 @@ export const PracticeRunner: React.FC<PracticeRunnerProps> = ({
 
     setAnswers(prev => ({
       ...prev,
-      [baseExerciseId(currentExercise.id)]: isCorrect
+      [baseExerciseId(currentExercise.id)]: isCorrect,
     }));
 
     setFeedback({
       isCorrect,
-      message: currentExercise.explanation || (isCorrect ? t(language, 'correct') : t(language, 'wrong'))
+      message:
+        currentExercise.explanation || (isCorrect ? t(language, 'correct') : t(language, 'wrong')),
     });
   };
 
@@ -125,7 +123,9 @@ export const PracticeRunner: React.FC<PracticeRunnerProps> = ({
           </div>
 
           <Card className="p-6">
-            <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-2">{t(language, 'practiceTitle')}</h1>
+            <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-2">
+              {t(language, 'practiceTitle')}
+            </h1>
             <p className="text-slate-600 dark:text-slate-300 mb-6">{t(language, 'practiceDesc')}</p>
 
             <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-sm text-slate-700 dark:border-slate-800/70 dark:bg-slate-900/40 dark:text-slate-200">
@@ -162,8 +162,12 @@ export const PracticeRunner: React.FC<PracticeRunnerProps> = ({
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
               <CheckCircle className="h-7 w-7" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">{t(language, 'practiceDoneTitle')}</h2>
-            <p className="text-slate-600 dark:text-slate-300 mb-6">{t(language, 'practiceDoneDesc')}</p>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              {t(language, 'practiceDoneTitle')}
+            </h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-6">
+              {t(language, 'practiceDoneDesc')}
+            </p>
 
             <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-sm text-slate-700 dark:border-slate-800/70 dark:bg-slate-900/40 dark:text-slate-200 mb-6">
               {language === 'de'
@@ -172,7 +176,14 @@ export const PracticeRunner: React.FC<PracticeRunnerProps> = ({
             </div>
 
             <Button
-              onClick={() => onComplete({ heartsEarned: earnedHeart, xpEarned: 10, gemsEarned: earnedHeart ? 1 : 0, answers })}
+              onClick={() =>
+                onComplete({
+                  heartsEarned: earnedHeart,
+                  xpEarned: 10,
+                  gemsEarned: earnedHeart ? 1 : 0,
+                  answers,
+                })
+              }
               variant="accent"
               className="w-full"
             >
@@ -209,31 +220,33 @@ export const PracticeRunner: React.FC<PracticeRunnerProps> = ({
 
       <main className="mx-auto max-w-3xl px-4 pb-32 pt-5">
         <Card className="p-6">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">{currentExercise.prompt}</h2>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+            {currentExercise.prompt}
+          </h2>
 
-        {(currentExercise.type === ExerciseType.MULTIPLE_CHOICE ||
-          currentExercise.type === ExerciseType.SCENARIO ||
-          currentExercise.type === ExerciseType.TRUE_FALSE ||
-          currentExercise.type === ExerciseType.CLOZE) && (
-          <div className="space-y-3">
-            {currentExercise.options?.map((opt, idx) => (
-              <button
-                key={idx}
-                disabled={!!feedback}
-                onClick={() => checkAnswer(opt)}
-                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                  feedback
-                    ? (opt === currentExercise.correctAnswer
+          {(currentExercise.type === ExerciseType.MULTIPLE_CHOICE ||
+            currentExercise.type === ExerciseType.SCENARIO ||
+            currentExercise.type === ExerciseType.TRUE_FALSE ||
+            currentExercise.type === ExerciseType.CLOZE) && (
+            <div className="space-y-3">
+              {currentExercise.options?.map((opt, idx) => (
+                <button
+                  key={idx}
+                  disabled={!!feedback}
+                  onClick={() => checkAnswer(opt)}
+                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                    feedback
+                      ? opt === currentExercise.correctAnswer
                         ? 'border-hermetic-success bg-green-50 dark:bg-green-900/30 text-hermetic-success dark:text-green-400'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500')
-                    : 'border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        )}
+                        : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
         </Card>
       </main>
 

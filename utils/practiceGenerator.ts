@@ -6,7 +6,7 @@ export const getPracticeSeed = (progress: UserProgress): string => {
   const dayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
   const lessonIds = [
     progress.currentLessonId,
-    ...Object.keys(progress.completedLessons || {})
+    ...Object.keys(progress.completedLessons || {}),
   ].filter(Boolean);
 
   lessonIds.sort();
@@ -31,7 +31,7 @@ export const generateLocalPracticeExercises = (
     getPracticeSeed(progress),
     `course:${course.id}`,
     `lang:${language}`,
-    `eligible:${toHex(fnv1a32(eligibleLessonIds.join(',')))}`
+    `eligible:${toHex(fnv1a32(eligibleLessonIds.join(',')))}`,
   ].join('|');
 
   const rng = mulberry32(fnv1a32(seed));
@@ -54,7 +54,7 @@ export const generateLocalPracticeExercises = (
     ExerciseType.MULTIPLE_CHOICE,
     ExerciseType.TRUE_FALSE,
     ExerciseType.CLOZE,
-    ExerciseType.SCENARIO
+    ExerciseType.SCENARIO,
   ]);
 
   const preferred = clonedOriginals.filter(e => preferredTypes.has(e.type));
@@ -66,7 +66,7 @@ export const generateLocalPracticeExercises = (
     ExerciseType.MULTIPLE_CHOICE,
     ExerciseType.TRUE_FALSE,
     ExerciseType.CLOZE,
-    ExerciseType.SCENARIO
+    ExerciseType.SCENARIO,
   ]);
 
   const practiceStats = progress.practiceStats || {};
@@ -78,9 +78,7 @@ export const generateLocalPracticeExercises = (
     .map(ex => ({ ex, score: scoreForPractice(ex, practiceStats, now) }));
 
   // Sort by score (higher first) with a small seeded jitter.
-  const pool = candidates
-    .sort((a, b) => (b.score - a.score) + (rng() - 0.5) * 0.25)
-    .map(x => x.ex);
+  const pool = candidates.sort((a, b) => b.score - a.score + (rng() - 0.5) * 0.25).map(x => x.ex);
 
   const picked: Exercise[] = [];
   const seen = new Set<string>();
@@ -178,7 +176,7 @@ const cloneExercise = (ex: Exercise, rng: Rng, salt: string): Exercise => {
   const cloned: Exercise = {
     ...ex,
     id: `${ex.id}__practice__${toHex(fnv1a32(`${salt}|${ex.id}|${ex.prompt}`))}`,
-    options: ex.options ? ex.options.slice() : undefined
+    options: ex.options ? ex.options.slice() : undefined,
   };
 
   if (cloned.options && cloned.options.length > 1) {
@@ -188,7 +186,12 @@ const cloneExercise = (ex: Exercise, rng: Rng, salt: string): Exercise => {
   return cloned;
 };
 
-const deriveLessonExercises = (lesson: Lesson, lang: Language, rng: Rng, seed: string): Exercise[] => {
+const deriveLessonExercises = (
+  lesson: Lesson,
+  lang: Language,
+  rng: Rng,
+  seed: string
+): Exercise[] => {
   const lessonText = collectLessonText(lesson);
   if (!lessonText) return [];
 
@@ -241,12 +244,17 @@ const collectLessonText = (lesson: Lesson): string => {
     lesson.description,
     lesson.introText,
     lesson.interpretation,
-    lesson.quote?.text
+    lesson.quote?.text,
   ];
   return normalizeWs(parts.filter(Boolean).join(' '));
 };
 
-const makeTrueFalse = (sentence: string, lang: Language, salt: string, rng: Rng): Exercise | null => {
+const makeTrueFalse = (
+  sentence: string,
+  lang: Language,
+  salt: string,
+  rng: Rng
+): Exercise | null => {
   const cleaned = normalizeWs(sentence).replace(/^[-–•]\s*/, '');
   if (cleaned.length < 20) return null;
 
@@ -263,7 +271,7 @@ const makeTrueFalse = (sentence: string, lang: Language, salt: string, rng: Rng)
     options,
     correctAnswer: answer,
     explanation,
-    points: 10
+    points: 10,
   };
 };
 
@@ -278,7 +286,9 @@ const makeCloze = (
   if (cleaned.length < 25) return null;
 
   const localKeywords = extractKeywords(cleaned, lang);
-  const candidates = uniqueStrings([...localKeywords, ...lessonKeywords]).filter(w => w.length >= 5);
+  const candidates = uniqueStrings([...localKeywords, ...lessonKeywords]).filter(
+    w => w.length >= 5
+  );
 
   const chosen = candidates.length > 0 ? pickOne(candidates, rng) : null;
   if (!chosen) return null;
@@ -286,7 +296,8 @@ const makeCloze = (
   const blanked = replaceFirstWordCaseInsensitive(cleaned, chosen, '_____');
   if (blanked === cleaned) return null;
 
-  const prompt = lang === 'de' ? `Setze das fehlende Wort ein: ${blanked}` : `Fill in the blank: ${blanked}`;
+  const prompt =
+    lang === 'de' ? `Setze das fehlende Wort ein: ${blanked}` : `Fill in the blank: ${blanked}`;
 
   const distractors = uniqueStrings(
     shuffle(
@@ -308,7 +319,7 @@ const makeCloze = (
       lang === 'de'
         ? 'Hinweis: Das Wort stammt aus dem Einführungstext/der Deutung der Lektion.'
         : 'Hint: The missing word is taken from the lesson’s intro/interpretation.',
-    points: 10
+    points: 10,
   };
 };
 
@@ -358,7 +369,7 @@ const makeMultipleChoice = (
       lang === 'de'
         ? 'Abgeleitet aus einem Satz im Einführungstext/der Deutung.'
         : 'Derived from a sentence in the intro/interpretation.',
-    points: 10
+    points: 10,
   };
 };
 
@@ -377,7 +388,10 @@ const parseDefinition = (
     const m = s.match(re);
     if (!m) continue;
 
-    const rawSubject = normalizeWs(stripQuotes(m[1] || '')).replace(/^(this|that|dies|das)\s+/i, '');
+    const rawSubject = normalizeWs(stripQuotes(m[1] || '')).replace(
+      /^(this|that|dies|das)\s+/i,
+      ''
+    );
     let rawDef = normalizeWs(stripQuotes(m[3] || ''));
 
     rawDef = rawDef.split(/[;:]/)[0].trim();
@@ -409,7 +423,7 @@ const negateHeuristically = (
       explanation:
         lang === 'de'
           ? 'Diese Aussage ist direkt aus dem Lektionstext abgeleitet.'
-          : 'This statement is directly derived from the lesson text.'
+          : 'This statement is directly derived from the lesson text.',
     };
   }
 
@@ -423,7 +437,8 @@ const negateHeuristically = (
   return {
     statement,
     answer: false,
-    explanation: lang === 'de' ? `Im Text heißt es sinngemäß: „${base}.“` : `The lesson implies: "${base}."`
+    explanation:
+      lang === 'de' ? `Im Text heißt es sinngemäß: „${base}.“` : `The lesson implies: "${base}."`,
   };
 };
 
@@ -437,9 +452,7 @@ const splitSentences = (text: string): string[] => {
 
 const extractKeywords = (text: string, lang: Language): string[] => {
   const stop = stopwords(lang);
-  const words = (text.match(/[A-Za-zÀ-ÖØ-öø-ÿÄÖÜäöüß]+/g) ?? [])
-    .map(w => w.trim())
-    .filter(Boolean);
+  const words = (text.match(/[A-Za-zÀ-ÖØ-öø-ÿÄÖÜäöüß]+/g) ?? []).map(w => w.trim()).filter(Boolean);
 
   const candidates = words
     .map(w => w.toLowerCase())
@@ -496,7 +509,7 @@ const stopwords = (lang: Language): Set<string> => {
     'den',
     'dem',
     'des',
-    'ein'
+    'ein',
   ];
 
   const extras =
@@ -507,7 +520,11 @@ const stopwords = (lang: Language): Set<string> => {
   return new Set([...common, ...extras]);
 };
 
-const replaceFirstWordCaseInsensitive = (text: string, word: string, replacement: string): string => {
+const replaceFirstWordCaseInsensitive = (
+  text: string,
+  word: string,
+  replacement: string
+): string => {
   const escaped = escapeRegExp(word);
   const re = new RegExp(`\\b${escaped}\\b`, 'i');
   return text.replace(re, replacement);
@@ -540,8 +557,28 @@ const uniqueStrings = (arr: string[]): string[] => {
 
 const fallbackDistractors = (lang: Language): string[] => {
   return lang === 'de'
-    ? ['Bewusstsein', 'Realität', 'Gedanke', 'Geist', 'Muster', 'Erfahrung', 'Prinzip', 'Ursache', 'Wirkung']
-    : ['consciousness', 'reality', 'thought', 'mind', 'pattern', 'experience', 'principle', 'cause', 'effect'];
+    ? [
+        'Bewusstsein',
+        'Realität',
+        'Gedanke',
+        'Geist',
+        'Muster',
+        'Erfahrung',
+        'Prinzip',
+        'Ursache',
+        'Wirkung',
+      ]
+    : [
+        'consciousness',
+        'reality',
+        'thought',
+        'mind',
+        'pattern',
+        'experience',
+        'principle',
+        'cause',
+        'effect',
+      ];
 };
 
 /* -------------------------- rng utils -------------------------- */
@@ -568,7 +605,7 @@ const mulberry32 = (seed: number): Rng => {
   };
 };
 
-const shuffle = <T,>(items: T[], rng: Rng): T[] => {
+const shuffle = <T>(items: T[], rng: Rng): T[] => {
   const arr = items.slice();
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -577,6 +614,6 @@ const shuffle = <T,>(items: T[], rng: Rng): T[] => {
   return arr;
 };
 
-const pickOne = <T,>(items: T[], rng: Rng): T => {
+const pickOne = <T>(items: T[], rng: Rng): T => {
   return items[Math.floor(rng() * items.length)];
 };

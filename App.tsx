@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { COURSES } from './constants';
 import { loadProgress, saveProgress } from './utils/storage';
-import { UserProgress, Language } from './types';
+import { UserProgress } from './types';
 import { AppShell } from './components/layout/AppShell';
 import type { TabKey } from './components/layout/BottomTabs';
 import { HomeScreen } from './screens/HomeScreen';
@@ -16,7 +16,7 @@ enum Screen {
   LESSON = 'LESSON',
   PROFILE = 'PROFILE',
   PRACTICE = 'PRACTICE',
-  TODAY = 'TODAY'
+  TODAY = 'TODAY',
 }
 
 const screenToTab = (screen: Screen): TabKey => {
@@ -49,9 +49,11 @@ export default function App() {
   const [userProgress, setUserProgress] = useState<UserProgress>(loadProgress());
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
   const [queuedLessonId, setQueuedLessonId] = useState<string | null>(null);
-  const [gateModal, setGateModal] = useState<{ open: boolean; unitId: string | null; lessonId: string | null }>(
-    { open: false, unitId: null, lessonId: null }
-  );
+  const [gateModal, setGateModal] = useState<{
+    open: boolean;
+    unitId: string | null;
+    lessonId: string | null;
+  }>({ open: false, unitId: null, lessonId: null });
 
   // Sync effect for storage
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function App() {
         correctCount: 0,
         wrongCount: 0,
         correctStreak: 0,
-        lastSeenAt: null
+        lastSeenAt: null,
       };
 
       next[exerciseId] = {
@@ -92,7 +94,7 @@ export default function App() {
         correctCount: prev.correctCount + (isCorrect ? 1 : 0),
         wrongCount: prev.wrongCount + (isCorrect ? 0 : 1),
         correctStreak: isCorrect ? prev.correctStreak + 1 : 0,
-        lastSeenAt: now
+        lastSeenAt: now,
       };
     }
 
@@ -130,9 +132,14 @@ export default function App() {
     return orderedLessons.findIndex(l => l.id === lessonId);
   };
 
-  const getNextLessonAfter = (lessonId: string, completed: Record<string, any>): string | null => {
+  const getNextLessonAfter = (
+    lessonId: string,
+    completed: Record<string, unknown>
+  ): string | null => {
     const orderedUnits = currentCourse.units.slice().sort((a, b) => a.order - b.order);
-    const orderedLessons = orderedUnits.flatMap(u => u.lessons.map(l => ({ unitId: u.id, lesson: l })));
+    const orderedLessons = orderedUnits.flatMap(u =>
+      u.lessons.map(l => ({ unitId: u.id, lesson: l }))
+    );
     const startIdx = orderedLessons.findIndex(x => x.lesson.id === lessonId);
 
     for (let i = Math.max(0, startIdx + 1); i < orderedLessons.length; i++) {
@@ -149,14 +156,16 @@ export default function App() {
       setUserProgress(prev => {
         const newCompleted = {
           ...prev.completedLessons,
-          [activeLessonId]: { score: scorePercent, completedAt: new Date().toISOString() }
+          [activeLessonId]: { score: scorePercent, completedAt: new Date().toISOString() },
         };
 
         // Determine next lesson without regressing progress when replaying older lessons.
-        const nextCandidate = getNextLessonAfter(activeLessonId, newCompleted) ?? prev.currentLessonId;
+        const nextCandidate =
+          getNextLessonAfter(activeLessonId, newCompleted) ?? prev.currentLessonId;
         const prevIdx = getLessonIndex(prev.currentLessonId);
         const nextIdx = getLessonIndex(nextCandidate);
-        const safeNextLessonId = nextIdx >= 0 && prevIdx >= 0 && nextIdx < prevIdx ? prev.currentLessonId : nextCandidate;
+        const safeNextLessonId =
+          nextIdx >= 0 && prevIdx >= 0 && nextIdx < prevIdx ? prev.currentLessonId : nextCandidate;
 
         const needsPractice = scorePercent < 90;
 
@@ -169,12 +178,13 @@ export default function App() {
           activeGate: needsPractice
             ? {
                 type: 'practice',
-                message: currentLanguage === 'de'
-                  ? 'Meisterschaft: Erst eine kurze Practice-Session (≥70% richtig), dann geht’s weiter.'
-                  : 'Mastery: Complete a short practice session (≥70% correct) to continue.',
-                createdAt: new Date().toISOString()
+                message:
+                  currentLanguage === 'de'
+                    ? 'Meisterschaft: Erst eine kurze Practice-Session (≥70% richtig), dann geht’s weiter.'
+                    : 'Mastery: Complete a short practice session (≥70% correct) to continue.',
+                createdAt: new Date().toISOString(),
               }
-            : null
+            : null,
         };
       });
       setScreen(Screen.HOME);
@@ -193,19 +203,19 @@ export default function App() {
   const toggleLanguage = () => {
     setUserProgress(prev => ({
       ...prev,
-      language: prev.language === 'en' ? 'de' : 'en'
+      language: prev.language === 'en' ? 'de' : 'en',
     }));
   };
 
   const toggleTheme = () => {
     setUserProgress(prev => ({
       ...prev,
-      theme: prev.theme === 'dark' ? 'light' : 'dark'
+      theme: prev.theme === 'dark' ? 'light' : 'dark',
     }));
   };
 
   // Find active lesson object
-  const activeLesson = activeLessonId 
+  const activeLesson = activeLessonId
     ? currentCourse.units.flatMap(u => u.lessons).find(l => l.id === activeLessonId)
     : null;
 
@@ -241,12 +251,16 @@ export default function App() {
               xp: prev.xp + xpEarned,
               gems: prev.gems + gemsEarned,
               practiceStats: mergePracticeStats(prev.practiceStats || {}, answers),
-              activeGate: gateSatisfied ? null : prev.activeGate
+              activeGate: gateSatisfied ? null : prev.activeGate,
             };
           });
 
           // If a lesson was queued behind the gate, continue into it when gate is satisfied.
-          if (userProgress.activeGate?.type === 'practice' && isGateSatisfiedByPractice(answers) && queuedLessonId) {
+          if (
+            userProgress.activeGate?.type === 'practice' &&
+            isGateSatisfiedByPractice(answers) &&
+            queuedLessonId
+          ) {
             setActiveLessonId(queuedLessonId);
             setQueuedLessonId(null);
             setScreen(Screen.LESSON);
@@ -275,13 +289,13 @@ export default function App() {
             lastDailyCompletedDate: today,
             outcomeHistory: [
               ...(prev.outcomeHistory || []).filter(e => e.date !== today),
-              { date: today, ...outcome }
+              { date: today, ...outcome },
             ].slice(-60),
             practiceStats: mergePracticeStats(prev.practiceStats || {}, practiceAnswers),
             memoryNotes: [
               ...(prev.memoryNotes || []).slice(-24),
-              `${today}: ${reflection.text}`
-            ].slice(-25)
+              `${today}: ${reflection.text}`,
+            ].slice(-25),
           }));
 
           setScreen(Screen.HOME);
@@ -296,38 +310,38 @@ export default function App() {
     <>
       <AppShell
         activeTab={activeTab}
-        onTabChange={(tab) => setScreen(tabToScreen(tab))}
+        onTabChange={tab => setScreen(tabToScreen(tab))}
         userProgress={userProgress}
         language={currentLanguage}
         labels={{
           home: t(currentLanguage, 'path'),
           practice: t(currentLanguage, 'practice'),
-          profile: t(currentLanguage, 'profile')
+          profile: t(currentLanguage, 'profile'),
         }}
       >
-      {screen === Screen.HOME && (
-        <HomeScreen
-          course={currentCourse}
-          userProgress={userProgress}
-          language={currentLanguage}
-          onStartLesson={handleStartLesson}
-          onStartToday={() => setScreen(Screen.TODAY)}
-          onStartPractice={() => setScreen(Screen.PRACTICE)}
-        />
-      )}
+        {screen === Screen.HOME && (
+          <HomeScreen
+            course={currentCourse}
+            userProgress={userProgress}
+            language={currentLanguage}
+            onStartLesson={handleStartLesson}
+            onStartToday={() => setScreen(Screen.TODAY)}
+            onStartPractice={() => setScreen(Screen.PRACTICE)}
+          />
+        )}
 
-      {screen === Screen.PROFILE && (
-        <ProfileScreen
-          userProgress={userProgress}
-          language={currentLanguage}
-          onToggleLanguage={toggleLanguage}
-          onToggleTheme={toggleTheme}
-          onReset={() => {
-            localStorage.clear();
-            window.location.reload();
-          }}
-        />
-      )}
+        {screen === Screen.PROFILE && (
+          <ProfileScreen
+            userProgress={userProgress}
+            language={currentLanguage}
+            onToggleLanguage={toggleLanguage}
+            onToggleTheme={toggleTheme}
+            onReset={() => {
+              localStorage.clear();
+              window.location.reload();
+            }}
+          />
+        )}
       </AppShell>
 
       {gateModal.open && userProgress.activeGate?.type === 'practice' && (

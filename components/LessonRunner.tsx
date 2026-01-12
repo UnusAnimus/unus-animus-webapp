@@ -39,13 +39,13 @@ interface LessonRunnerProps {
   onExit: () => void;
 }
 
-export const LessonRunner: React.FC<LessonRunnerProps> = ({ 
-  lesson, 
+export const LessonRunner: React.FC<LessonRunnerProps> = ({
+  lesson,
   userHearts,
   language,
-  onComplete, 
-  onHeartLost, 
-  onExit 
+  onComplete,
+  onHeartLost,
+  onExit,
 }) => {
   const [currentStep, setCurrentStep] = useState(-1); // -1 is Intro
   const [feedback, setFeedback] = useState<{ isCorrect: boolean; message: string } | null>(null);
@@ -54,21 +54,22 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
 
   // Sorting State
   const [selectedSortItems, setSelectedSortItems] = useState<string[]>([]);
-  
-  // Reflection State
-  const [reflectionText, setReflectionText] = useState("");
 
-  const currentExercise = currentStep >= 0 && currentStep < lesson.exercises.length 
-    ? lesson.exercises[currentStep] 
-    : null;
+  // Reflection State
+  const [reflectionText, setReflectionText] = useState('');
+
+  const currentExercise =
+    currentStep >= 0 && currentStep < lesson.exercises.length
+      ? lesson.exercises[currentStep]
+      : null;
 
   const progressPercent = ((currentStep + 1) / (lesson.exercises.length + 1)) * 100;
 
   const handleNext = () => {
     setFeedback(null);
-    setReflectionText("");
+    setReflectionText('');
     setSelectedSortItems([]);
-    
+
     if (currentStep < lesson.exercises.length - 1) {
       setCurrentStep(prev => prev + 1);
     } else {
@@ -80,12 +81,12 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
     }
   };
 
-  const checkAnswer = async (userAnswer: any) => {
+  const checkAnswer = async (userAnswer: unknown) => {
     if (!currentExercise || feedback) return;
 
     setIsProcessing(true);
     let isCorrect = false;
-    let feedbackMsg = "";
+    let feedbackMsg = '';
     let scoreToAdd = 0;
 
     switch (currentExercise.type) {
@@ -97,26 +98,37 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
           } else {
             isCorrect = userAnswer === currentExercise.correctAnswer;
           }
-          feedbackMsg = currentExercise.explanation || (isCorrect ? t(language, 'correct') : t(language, 'wrong'));
+          feedbackMsg =
+            currentExercise.explanation ||
+            (isCorrect ? t(language, 'correct') : t(language, 'wrong'));
         }
         break;
       case ExerciseType.MULTIPLE_CHOICE:
       case ExerciseType.SCENARIO:
       case ExerciseType.CLOZE:
         isCorrect = userAnswer === currentExercise.correctAnswer;
-        feedbackMsg = currentExercise.explanation || (isCorrect ? t(language, 'correct') : t(language, 'wrong'));
+        feedbackMsg =
+          currentExercise.explanation ||
+          (isCorrect ? t(language, 'correct') : t(language, 'wrong'));
         break;
-      
-      case ExerciseType.SORTING:
+
+      case ExerciseType.SORTING: {
         const correctOrder = currentExercise.correctAnswer as string[];
         const userOrder = userAnswer as string[];
         isCorrect = JSON.stringify(correctOrder) === JSON.stringify(userOrder);
-        feedbackMsg = currentExercise.explanation || (isCorrect ? t(language, 'correct') : t(language, 'notQuite'));
+        feedbackMsg =
+          currentExercise.explanation ||
+          (isCorrect ? t(language, 'correct') : t(language, 'notQuite'));
         break;
+      }
 
-      case ExerciseType.REFLECTION:
-        // Call Gemini Service
-        const analysis = await evaluateReflection(currentExercise.prompt, userAnswer as string, language);
+      case ExerciseType.REFLECTION: {
+        // Call AI evaluation via proxy
+        const analysis = await evaluateReflection(
+          currentExercise.prompt,
+          userAnswer as string,
+          language
+        );
         isCorrect = analysis.isPass;
         feedbackMsg = analysis.feedback;
         // Adjust points based on AI score (0-100% of exercise points)
@@ -124,6 +136,7 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
           scoreToAdd = Math.floor(currentExercise.points * (analysis.score / 100));
         }
         break;
+      }
     }
 
     // Default scoring for non-reflection
@@ -149,7 +162,9 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-300">
             <Heart className="h-7 w-7" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">{t(language, 'noHeartsTitle')}</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+            {t(language, 'noHeartsTitle')}
+          </h2>
           <p className="text-slate-600 dark:text-slate-300 mb-6">{t(language, 'noHeartsDesc')}</p>
           <Button onClick={onExit} variant="accent" size="lg" className="w-full">
             {t(language, 'backToPath')}
@@ -171,13 +186,21 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
           </div>
 
           <Card className="p-6">
-            <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-3">{lesson.title}</h1>
-            <p className="text-base text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">{lesson.introText}</p>
+            <h1 className="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-3">
+              {lesson.title}
+            </h1>
+            <p className="text-base text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              {lesson.introText}
+            </p>
 
             {lesson.quote && (
               <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-5 dark:border-slate-800/70 dark:bg-slate-900/40">
-                <p className="font-serif italic text-lg text-slate-900 dark:text-slate-100 mb-2">"{lesson.quote.text}"</p>
-                <span className="text-xs font-bold text-hermetic-accent uppercase tracking-widest">— {lesson.quote.source}</span>
+                <p className="font-serif italic text-lg text-slate-900 dark:text-slate-100 mb-2">
+                  "{lesson.quote.text}"
+                </p>
+                <span className="text-xs font-bold text-hermetic-accent uppercase tracking-widest">
+                  — {lesson.quote.source}
+                </span>
               </div>
             )}
 
@@ -186,12 +209,19 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
                   {t(language, 'interpretation')}
                 </h3>
-                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{lesson.interpretation}</p>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {lesson.interpretation}
+                </p>
               </div>
             )}
 
             <div className="mt-6">
-              <Button onClick={() => setCurrentStep(0)} variant="success" size="lg" className="w-full">
+              <Button
+                onClick={() => setCurrentStep(0)}
+                variant="success"
+                size="lg"
+                className="w-full"
+              >
                 {t(language, 'start')}
               </Button>
             </div>
@@ -226,94 +256,104 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
         {currentExercise && (
           <div className="animate-fade-in">
             <Card className="p-6">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">{currentExercise.prompt}</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6">
+                {currentExercise.prompt}
+              </h2>
 
-            {/* Multiple Choice / Scenario / TrueFalse */}
-            {(currentExercise.type === ExerciseType.MULTIPLE_CHOICE || 
-              currentExercise.type === ExerciseType.SCENARIO ||
-              currentExercise.type === ExerciseType.TRUE_FALSE ||
-              currentExercise.type === ExerciseType.CLOZE) && (
-              <div className="space-y-3">
-                {currentExercise.options?.map((opt, idx) => {
-                  return (
-                    <button
-                      key={idx}
-                      disabled={!!feedback}
-                      onClick={() => checkAnswer(opt)}
-                      className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                        feedback 
-                          ? (opt === currentExercise.correctAnswer 
-                              ? "border-hermetic-success bg-green-50 dark:bg-green-900/30 text-hermetic-success dark:text-green-400" 
-                              : "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500")
-                          : "border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-gray-600"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Sorting */}
-            {currentExercise.type === ExerciseType.SORTING && (
-              <div className="space-y-6">
-                <div className="min-h-[60px] p-4 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 flex flex-wrap gap-2">
-                  {selectedSortItems.length === 0 && <span className="text-gray-400 dark:text-gray-500 text-sm">{t(language, 'sortInstruction')}</span>}
-                  {selectedSortItems.map((item, idx) => (
-                    <span key={idx} className="px-3 py-2 bg-hermetic-dark dark:bg-slate-700 text-white rounded-lg text-sm shadow-sm">
-                      {item}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                   {currentExercise.options?.filter(opt => !selectedSortItems.includes(opt)).map((opt, idx) => (
-                     <button 
+              {/* Multiple Choice / Scenario / TrueFalse */}
+              {(currentExercise.type === ExerciseType.MULTIPLE_CHOICE ||
+                currentExercise.type === ExerciseType.SCENARIO ||
+                currentExercise.type === ExerciseType.TRUE_FALSE ||
+                currentExercise.type === ExerciseType.CLOZE) && (
+                <div className="space-y-3">
+                  {currentExercise.options?.map((opt, idx) => {
+                    return (
+                      <button
                         key={idx}
                         disabled={!!feedback}
-                        onClick={() => setSelectedSortItems([...selectedSortItems, opt])}
-                        className="px-4 py-2 border-2 border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:border-hermetic-accent"
-                     >
-                       {opt}
-                     </button>
-                   ))}
+                        onClick={() => checkAnswer(opt)}
+                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                          feedback
+                            ? opt === currentExercise.correctAnswer
+                              ? 'border-hermetic-success bg-green-50 dark:bg-green-900/30 text-hermetic-success dark:text-green-400'
+                              : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
-                {!feedback && (
-                   <Button
-                     disabled={selectedSortItems.length !== currentExercise.options?.length}
-                     onClick={() => checkAnswer(selectedSortItems)}
-                     variant="primary"
-                     className="w-full"
-                   >
-                     {t(language, 'check')}
-                   </Button>
-                )}
-              </div>
-            )}
+              )}
 
-            {/* Reflection */}
-            {currentExercise.type === ExerciseType.REFLECTION && (
-              <div className="space-y-4">
-                <textarea
-                  disabled={!!feedback}
-                  value={reflectionText}
-                  onChange={(e) => setReflectionText(e.target.value)}
-                  placeholder={t(language, 'reflectionPlaceholder')}
-                  className="w-full p-4 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-hermetic-accent focus:border-transparent outline-none min-h-[150px]"
-                />
-                {!feedback && (
-                  <Button
-                    disabled={reflectionText.length < 10 || isProcessing}
-                    onClick={() => checkAnswer(reflectionText)}
-                    variant="primary"
-                    className="w-full"
-                  >
-                    {isProcessing ? t(language, 'aiThinking') : t(language, 'submit')}
-                  </Button>
-                )}
-              </div>
-            )}
+              {/* Sorting */}
+              {currentExercise.type === ExerciseType.SORTING && (
+                <div className="space-y-6">
+                  <div className="min-h-[60px] p-4 bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 flex flex-wrap gap-2">
+                    {selectedSortItems.length === 0 && (
+                      <span className="text-gray-400 dark:text-gray-500 text-sm">
+                        {t(language, 'sortInstruction')}
+                      </span>
+                    )}
+                    {selectedSortItems.map((item, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-2 bg-hermetic-dark dark:bg-slate-700 text-white rounded-lg text-sm shadow-sm"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {currentExercise.options
+                      ?.filter(opt => !selectedSortItems.includes(opt))
+                      .map((opt, idx) => (
+                        <button
+                          key={idx}
+                          disabled={!!feedback}
+                          onClick={() => setSelectedSortItems([...selectedSortItems, opt])}
+                          className="px-4 py-2 border-2 border-gray-200 dark:border-slate-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:border-hermetic-accent"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                  </div>
+                  {!feedback && (
+                    <Button
+                      disabled={selectedSortItems.length !== currentExercise.options?.length}
+                      onClick={() => checkAnswer(selectedSortItems)}
+                      variant="primary"
+                      className="w-full"
+                    >
+                      {t(language, 'check')}
+                    </Button>
+                  )}
+                </div>
+              )}
 
+              {/* Reflection */}
+              {currentExercise.type === ExerciseType.REFLECTION && (
+                <div className="space-y-4">
+                  <textarea
+                    disabled={!!feedback}
+                    value={reflectionText}
+                    onChange={e => setReflectionText(e.target.value)}
+                    placeholder={t(language, 'reflectionPlaceholder')}
+                    className="w-full p-4 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-hermetic-accent focus:border-transparent outline-none min-h-[150px]"
+                  />
+                  {!feedback && (
+                    <Button
+                      disabled={reflectionText.length < 10 || isProcessing}
+                      onClick={() => checkAnswer(reflectionText)}
+                      variant="primary"
+                      className="w-full"
+                    >
+                      {isProcessing ? t(language, 'aiThinking') : t(language, 'submit')}
+                    </Button>
+                  )}
+                </div>
+              )}
             </Card>
           </div>
         )}
@@ -333,12 +373,18 @@ export const LessonRunner: React.FC<LessonRunnerProps> = ({
                   feedback.isCorrect ? 'bg-hermetic-success' : 'bg-hermetic-error'
                 }`}
               >
-                {feedback.isCorrect ? <CheckCircle className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                {feedback.isCorrect ? (
+                  <CheckCircle className="h-5 w-5" />
+                ) : (
+                  <X className="h-5 w-5" />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div
                   className={`text-lg font-bold ${
-                    feedback.isCorrect ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'
+                    feedback.isCorrect
+                      ? 'text-emerald-700 dark:text-emerald-300'
+                      : 'text-red-700 dark:text-red-300'
                   }`}
                 >
                   {feedback.isCorrect ? t(language, 'excellent') : t(language, 'notQuite')}

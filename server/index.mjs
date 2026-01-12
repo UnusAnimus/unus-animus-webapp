@@ -26,7 +26,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(
   cors({
     origin: [/^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/],
-    credentials: false
+    credentials: false,
   })
 );
 
@@ -35,11 +35,16 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/info', (_req, res) => {
-  const provider = OPENAI_API_KEY ? 'openai' : (GEMINI_API_KEY ? 'gemini' : 'none');
+  const provider = OPENAI_API_KEY ? 'openai' : GEMINI_API_KEY ? 'gemini' : 'none';
   res.json({
     ok: true,
     provider,
-    model: provider === 'openai' ? OPENAI_MODEL : (provider === 'gemini' ? 'gemini-3-flash-preview' : null)
+    model:
+      provider === 'openai'
+        ? OPENAI_MODEL
+        : provider === 'gemini'
+          ? 'gemini-3-flash-preview'
+          : null,
   });
 });
 
@@ -55,7 +60,7 @@ If the answer is dangerous (self-harm), flag it immediately.
 Be brief.
 `;
 
-const getSystemInstruction = (lang) => {
+const getSystemInstruction = lang => {
   const langInstruction = lang === 'de' ? 'Answer in German (Du-form).' : 'Answer in English.';
   return `${SYSTEM_INSTRUCTION_BASE}\n${langInstruction}`;
 };
@@ -68,14 +73,14 @@ const callOpenAI = async ({ prompt, userAnswer, language }) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: OPENAI_MODEL,
       input,
       instructions: system,
-      temperature: 0.2
-    })
+      temperature: 0.2,
+    }),
   });
 
   if (!res.ok) {
@@ -87,7 +92,11 @@ const callOpenAI = async ({ prompt, userAnswer, language }) => {
   // Try to extract text output from Responses API
   const outputText =
     data?.output_text ||
-    data?.output?.flatMap(o => o?.content || []).map(c => c?.text).filter(Boolean).join('') ||
+    data?.output
+      ?.flatMap(o => o?.content || [])
+      .map(c => c?.text)
+      .filter(Boolean)
+      .join('') ||
     '';
 
   let parsed;
@@ -107,8 +116,9 @@ const callOpenAI = async ({ prompt, userAnswer, language }) => {
   return {
     score: Number(parsed?.score) || 0,
     feedback:
-      parsed?.feedback || (language === 'de' ? 'Keine Bewertung möglich.' : 'Evaluation not available.'),
-    isPass: parsed?.isPass ?? false
+      parsed?.feedback ||
+      (language === 'de' ? 'Keine Bewertung möglich.' : 'Evaluation not available.'),
+    isPass: parsed?.isPass ?? false,
   };
 };
 
@@ -121,7 +131,7 @@ const simulateEvaluation = (text, language) => {
         language === 'de'
           ? 'Das war etwas kurz. Kannst du das etwas genauer ausführen?'
           : 'That was a bit short. Can you elaborate?',
-      isPass: false
+      isPass: false,
     };
   }
 
@@ -131,7 +141,7 @@ const simulateEvaluation = (text, language) => {
       language === 'de'
         ? 'Guter Gedanke. Wichtig ist, die Verantwortung im Inneren zu erkennen.'
         : 'Good thought. The key is to recognize responsibility within.',
-    isPass: true
+    isPass: true,
   };
 };
 
@@ -152,7 +162,7 @@ app.post('/api/evaluate-reflection', async (req, res) => {
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Prompt: \"${prompt}\"\nUser Answer: \"${userAnswer}\"\n\nEvaluate this answer.`,
+        contents: `Prompt: "${prompt}"\nUser Answer: "${userAnswer}"\n\nEvaluate this answer.`,
         config: {
           systemInstruction: getSystemInstruction(language),
           responseMimeType: 'application/json',
@@ -162,21 +172,25 @@ app.post('/api/evaluate-reflection', async (req, res) => {
               score: { type: Type.NUMBER, description: 'Score between 0 and 100' },
               feedback: {
                 type: Type.STRING,
-                description: `Constructive feedback in ${language === 'de' ? 'German' : 'English'}`
+                description: `Constructive feedback in ${language === 'de' ? 'German' : 'English'}`,
               },
-              isPass: { type: Type.BOOLEAN, description: 'True if the answer is acceptable/relevant' }
+              isPass: {
+                type: Type.BOOLEAN,
+                description: 'True if the answer is acceptable/relevant',
+              },
             },
-            required: ['score', 'feedback', 'isPass']
-          }
-        }
+            required: ['score', 'feedback', 'isPass'],
+          },
+        },
       });
 
       const result = JSON.parse(response.text || '{}');
       return res.json({
         score: result.score || 0,
         feedback:
-          result.feedback || (language === 'de' ? 'Keine Bewertung möglich.' : 'Evaluation not available.'),
-        isPass: result.isPass ?? false
+          result.feedback ||
+          (language === 'de' ? 'Keine Bewertung möglich.' : 'Evaluation not available.'),
+        isPass: result.isPass ?? false,
       });
     }
 
@@ -189,6 +203,6 @@ app.post('/api/evaluate-reflection', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[ai-proxy] listening on http://localhost:${PORT}`);
-  const provider = OPENAI_API_KEY ? 'openai' : (GEMINI_API_KEY ? 'gemini' : 'none');
+  const provider = OPENAI_API_KEY ? 'openai' : GEMINI_API_KEY ? 'gemini' : 'none';
   console.log(`[ai-proxy] provider: ${provider} (simulation if none)`);
 });

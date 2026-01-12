@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently -k -n web,ai -c cyan,magenta \"vite --host :: --port 3000\" \"node server/index.mjs\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -22,6 +26,13 @@
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.2.1",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
+    "prettier": "^3.5.1",
+    "typescript-eslint": "^8.19.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

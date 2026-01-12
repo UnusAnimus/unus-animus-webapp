@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import type { Language, Theme, UserProgress } from '../types';
+import type { Language, UserProgress } from '../types';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ProgressBar } from '../components/ui/ProgressBar';
@@ -19,7 +19,7 @@ export function ProfileScreen({
   language,
   onToggleLanguage,
   onToggleTheme,
-  onReset
+  onReset,
 }: ProfileScreenProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -27,7 +27,8 @@ export function ProfileScreen({
   const levelProgress = Math.min(1, (userProgress.xp % 100) / 100);
   const progressPercent = Math.round(levelProgress * 100);
 
-  const themeLabel = userProgress.theme === 'light' ? t(language, 'lightMode') : t(language, 'darkMode');
+  const themeLabel =
+    userProgress.theme === 'light' ? t(language, 'lightMode') : t(language, 'darkMode');
   const ThemeIcon = userProgress.theme === 'light' ? Sun : Moon;
 
   const downloadJson = (filename: string, obj: unknown) => {
@@ -55,8 +56,9 @@ export function ProfileScreen({
 
       localStorage.setItem('kybalion_user_progress', JSON.stringify(parsed));
       window.location.reload();
-    } catch (e: any) {
-      setImportError(e?.message || (language === 'de' ? 'Import fehlgeschlagen.' : 'Import failed.'));
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : undefined;
+      setImportError(message || (language === 'de' ? 'Import fehlgeschlagen.' : 'Import failed.'));
     }
   };
 
@@ -66,14 +68,20 @@ export function ProfileScreen({
         <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
           {t(language, 'profile')}
         </div>
-        <h1 className="mt-1 font-serif text-3xl font-bold tracking-tight">{t(language, 'profile')}</h1>
+        <h1 className="mt-1 font-serif text-3xl font-bold tracking-tight">
+          {t(language, 'profile')}
+        </h1>
       </div>
 
       <Card className="p-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t(language, 'level')}</div>
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">XP: {userProgress.xp}</div>
+            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              {t(language, 'level')}
+            </div>
+            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              XP: {userProgress.xp}
+            </div>
           </div>
           <div className="rounded-2xl bg-hermetic-accent/15 px-3 py-1 text-sm font-bold text-hermetic-accent">
             {progressPercent}%
@@ -113,7 +121,9 @@ export function ProfileScreen({
       </div>
 
       <Card className="p-4">
-        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{language === 'de' ? 'Daten zurücksetzen' : 'Reset data'}</div>
+        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          {language === 'de' ? 'Daten zurücksetzen' : 'Reset data'}
+        </div>
         <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {language === 'de'
             ? 'Setzt lokalen Fortschritt zurück (LocalStorage).'
@@ -173,7 +183,7 @@ export function ProfileScreen({
             type="file"
             accept="application/json"
             className="hidden"
-            onChange={(e) => {
+            onChange={e => {
               const file = e.target.files?.[0];
               if (!file) return;
               void handleImportFile(file);

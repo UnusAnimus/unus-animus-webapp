@@ -7,12 +7,16 @@ export type ReflectionFeedback = {
 };
 
 const DEFAULT_PROXY_URL = 'http://localhost:8787';
+const ENV_PROXY_URL =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_AI_PROXY_URL
+    ? import.meta.env.VITE_AI_PROXY_URL
+    : undefined;
 
 export const evaluateReflectionViaProxy = async (
   prompt: string,
   userAnswer: string,
   language: Language,
-  proxyBaseUrl = DEFAULT_PROXY_URL
+  proxyBaseUrl = ENV_PROXY_URL ?? DEFAULT_PROXY_URL
 ): Promise<ReflectionFeedback> => {
   const url = `${proxyBaseUrl}/api/evaluate-reflection`;
 
@@ -25,7 +29,7 @@ export const evaluateReflectionViaProxy = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, userAnswer, language }),
-      signal: controller.signal
+      signal: controller.signal,
     });
   } finally {
     clearTimeout(timeout);

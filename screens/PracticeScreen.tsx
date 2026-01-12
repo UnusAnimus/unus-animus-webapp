@@ -7,7 +7,12 @@ type PracticeScreenProps = {
   userProgress: UserProgress;
   language: Language;
   onExit: () => void;
-  onComplete: (payload: { heartsEarned: number; xpEarned: number; gemsEarned: number; answers: Record<string, boolean> }) => void;
+  onComplete: (payload: {
+    heartsEarned: number;
+    xpEarned: number;
+    gemsEarned: number;
+    answers: Record<string, boolean>;
+  }) => void;
 };
 
 export function PracticeScreen(props: PracticeScreenProps) {

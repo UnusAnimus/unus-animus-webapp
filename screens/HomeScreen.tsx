@@ -54,7 +54,7 @@ export function HomeScreen({
   language,
   onStartLesson,
   onStartToday,
-  onStartPractice
+  onStartPractice,
 }: HomeScreenProps) {
   const currentLesson = useMemo(() => {
     const lessonId = userProgress.currentLessonId;
@@ -67,17 +67,21 @@ export function HomeScreen({
 
   const totalLessons = course.units.reduce((acc, u) => acc + u.lessons.length, 0);
   const completedCount = Object.keys(userProgress.completedLessons || {}).length;
-  const completionPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const completionPercent =
+    totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
-  const continueUnitId = currentLesson?.unitId ?? findUnitIdForLesson(course, userProgress.currentLessonId);
+  const continueUnitId =
+    currentLesson?.unitId ?? findUnitIdForLesson(course, userProgress.currentLessonId);
 
-  const [aiProviderLabel, setAiProviderLabel] = useState<string>(() => (language === 'de' ? 'AI: —' : 'AI: —'));
+  const [aiProviderLabel, setAiProviderLabel] = useState<string>(() =>
+    language === 'de' ? 'AI: —' : 'AI: —'
+  );
   const [aiProviderTone, setAiProviderTone] = useState<'ok' | 'warn' | 'bad'>(() => 'warn');
 
   useEffect(() => {
     let isMounted = true;
     getAiStatus(language)
-      .then((status) => {
+      .then(status => {
         if (!isMounted) return;
         if (status.provider === 'openai') {
           setAiProviderLabel(language === 'de' ? 'AI: OpenAI aktiv' : 'AI: OpenAI active');
@@ -128,7 +132,9 @@ export function HomeScreen({
           <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             {course.title}
           </div>
-          <h1 className="mt-1 font-serif text-3xl font-bold tracking-tight">{t(language, 'path')}</h1>
+          <h1 className="mt-1 font-serif text-3xl font-bold tracking-tight">
+            {t(language, 'path')}
+          </h1>
         </div>
         <Badge variant="accent">{completionPercent}%</Badge>
       </div>
@@ -194,7 +200,13 @@ export function HomeScreen({
             </div>
           </div>
           <Badge variant="soft">
-            {last7.length ? (language === 'de' ? `${last7.length} Einträge` : `${last7.length} entries`) : (language === 'de' ? 'Noch leer' : 'Empty')}
+            {last7.length
+              ? language === 'de'
+                ? `${last7.length} Einträge`
+                : `${last7.length} entries`
+              : language === 'de'
+                ? 'Noch leer'
+                : 'Empty'}
           </Badge>
         </div>
 
@@ -205,21 +217,27 @@ export function HomeScreen({
                 <span>{language === 'de' ? 'Klarheit' : 'Clarity'}</span>
                 <span className="text-slate-500 dark:text-slate-400">Ø {avgClarity ?? '—'}</span>
               </div>
-              <div className="mt-2"><MiniBars values={last7Clarity} /></div>
+              <div className="mt-2">
+                <MiniBars values={last7Clarity} />
+              </div>
             </div>
             <div>
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
                 <span>{language === 'de' ? 'Reaktivität' : 'Reactivity'}</span>
                 <span className="text-slate-500 dark:text-slate-400">Ø {avgReactivity ?? '—'}</span>
               </div>
-              <div className="mt-2"><MiniBars values={last7Reactivity} /></div>
+              <div className="mt-2">
+                <MiniBars values={last7Reactivity} />
+              </div>
             </div>
             <div>
               <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
                 <span>{language === 'de' ? 'Selbstwirksamkeit' : 'Agency'}</span>
                 <span className="text-slate-500 dark:text-slate-400">Ø {avgAgency ?? '—'}</span>
               </div>
-              <div className="mt-2"><MiniBars values={last7Agency} /></div>
+              <div className="mt-2">
+                <MiniBars values={last7Agency} />
+              </div>
             </div>
           </div>
         ) : (
@@ -256,7 +274,8 @@ export function HomeScreen({
           <div className="flex items-center gap-2">
             <div className="hidden flex-col gap-2 sm:flex">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                <Heart className="h-4 w-4 text-red-500" /> {userProgress.hearts}/{userProgress.maxHearts}
+                <Heart className="h-4 w-4 text-red-500" /> {userProgress.hearts}/
+                {userProgress.maxHearts}
               </div>
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
                 <Flame className="h-4 w-4 text-orange-500" /> {userProgress.streak}

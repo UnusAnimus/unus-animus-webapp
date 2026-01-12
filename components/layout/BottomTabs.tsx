@@ -19,7 +19,8 @@ export function BottomTabs({ active, onChange, labels }: BottomTabsProps) {
     'flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-xs font-semibold transition-colors';
 
   const activeCls = 'text-hermetic-accent';
-  const inactiveCls = 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
+  const inactiveCls =
+    'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
 
   return (
     <nav className="pb-safe sticky bottom-0 z-30 border-t border-slate-200/60 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/60 sm:hidden">

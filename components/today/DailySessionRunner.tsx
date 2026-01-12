@@ -30,7 +30,8 @@ type Props = {
   onComplete: (payload: DailyCompletePayload) => void;
 };
 
-const clampInt = (n: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(n)));
+const clampInt = (n: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, Math.round(n)));
 
 const findTodayLesson = (course: Course, progress: UserProgress): Lesson => {
   const allLessons = course.units.flatMap(u => u.lessons);
@@ -107,7 +108,7 @@ export function DailySessionRunner({ course, userProgress, language, onExit, onC
         gemsEarned: fb.isPass ? 2 : 0,
         outcome,
         reflection: { prompt: reflectionPrompt, text, score: fb.score },
-        practiceAnswers
+        practiceAnswers,
       });
     } finally {
       setReflectionBusy(false);
@@ -133,7 +134,9 @@ export function DailySessionRunner({ course, userProgress, language, onExit, onC
       <main className="mx-auto max-w-3xl px-4 pb-28 pt-5">
         {step === 0 && (
           <Card className="p-6">
-            <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Check-in</div>
+            <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              Check-in
+            </div>
             <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">
               {language === 'de' ? 'Deine Session für heute' : 'Your session for today'}
             </h1>
@@ -145,16 +148,43 @@ export function DailySessionRunner({ course, userProgress, language, onExit, onC
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               <div>
-                <div className="text-sm font-semibold">{language === 'de' ? 'Klarheit' : 'Clarity'}: {outcome.clarity}/10</div>
-                <input className="w-full" type="range" min={1} max={10} value={outcome.clarity} onChange={e => updateOutcome('clarity', Number(e.target.value))} />
+                <div className="text-sm font-semibold">
+                  {language === 'de' ? 'Klarheit' : 'Clarity'}: {outcome.clarity}/10
+                </div>
+                <input
+                  className="w-full"
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={outcome.clarity}
+                  onChange={e => updateOutcome('clarity', Number(e.target.value))}
+                />
               </div>
               <div>
-                <div className="text-sm font-semibold">{language === 'de' ? 'Reaktivität' : 'Reactivity'}: {outcome.reactivity}/10</div>
-                <input className="w-full" type="range" min={1} max={10} value={outcome.reactivity} onChange={e => updateOutcome('reactivity', Number(e.target.value))} />
+                <div className="text-sm font-semibold">
+                  {language === 'de' ? 'Reaktivität' : 'Reactivity'}: {outcome.reactivity}/10
+                </div>
+                <input
+                  className="w-full"
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={outcome.reactivity}
+                  onChange={e => updateOutcome('reactivity', Number(e.target.value))}
+                />
               </div>
               <div>
-                <div className="text-sm font-semibold">{language === 'de' ? 'Handlungsfähigkeit' : 'Agency'}: {outcome.agency}/10</div>
-                <input className="w-full" type="range" min={1} max={10} value={outcome.agency} onChange={e => updateOutcome('agency', Number(e.target.value))} />
+                <div className="text-sm font-semibold">
+                  {language === 'de' ? 'Handlungsfähigkeit' : 'Agency'}: {outcome.agency}/10
+                </div>
+                <input
+                  className="w-full"
+                  type="range"
+                  min={1}
+                  max={10}
+                  value={outcome.agency}
+                  onChange={e => updateOutcome('agency', Number(e.target.value))}
+                />
               </div>
             </div>
 
@@ -182,9 +212,21 @@ export function DailySessionRunner({ course, userProgress, language, onExit, onC
             <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
               {language === 'de' ? 'Mikro-Praxis' : 'Micro practice'}
             </div>
-            <p className="mt-4 text-slate-700 dark:text-slate-200 leading-relaxed">{microPractice}</p>
-            <Button className="mt-6 w-full" variant={microDone ? 'accent' : 'secondary'} onClick={() => setMicroDone(true)}>
-              {microDone ? (language === 'de' ? 'Erledigt' : 'Done') : (language === 'de' ? 'Als erledigt markieren' : 'Mark as done')}
+            <p className="mt-4 text-slate-700 dark:text-slate-200 leading-relaxed">
+              {microPractice}
+            </p>
+            <Button
+              className="mt-6 w-full"
+              variant={microDone ? 'accent' : 'secondary'}
+              onClick={() => setMicroDone(true)}
+            >
+              {microDone
+                ? language === 'de'
+                  ? 'Erledigt'
+                  : 'Done'
+                : language === 'de'
+                  ? 'Als erledigt markieren'
+                  : 'Mark as done'}
             </Button>
             <Button className="mt-3 w-full" variant="accent" onClick={goNext} disabled={!microDone}>
               {language === 'de' ? 'Weiter' : 'Continue'}
@@ -207,7 +249,9 @@ export function DailySessionRunner({ course, userProgress, language, onExit, onC
                 <div className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                   {practiceIdx + 1}/{practice.length}
                 </div>
-                <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{currentPractice.prompt}</h3>
+                <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  {currentPractice.prompt}
+                </h3>
                 <div className="mt-4 space-y-3">
                   {currentPractice.options?.map((opt, idx) => (
                     <button
@@ -244,7 +288,13 @@ export function DailySessionRunner({ course, userProgress, language, onExit, onC
               onClick={submitReflection}
               disabled={reflectionBusy || reflectionText.trim().length < 10}
             >
-              {reflectionBusy ? (language === 'de' ? 'Bewertung…' : 'Evaluating…') : (language === 'de' ? 'Abschließen' : 'Finish')}
+              {reflectionBusy
+                ? language === 'de'
+                  ? 'Bewertung…'
+                  : 'Evaluating…'
+                : language === 'de'
+                  ? 'Abschließen'
+                  : 'Finish'}
             </Button>
 
             {reflectionScore !== null && (

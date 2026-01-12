@@ -23,7 +23,7 @@ export function AppShell({
   userProgress,
   language,
   labels,
-  children
+  children,
 }: AppShellProps) {
   return (
     <div className="h-full min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900 dark:from-slate-950 dark:to-slate-950 dark:text-slate-100">
@@ -32,9 +32,7 @@ export function AppShell({
       <div className="mx-auto flex max-w-6xl gap-5">
         <SidebarNav active={activeTab} onChange={onTabChange} labels={labels} />
 
-        <main className="flex-1 px-4 pb-24 pt-6 sm:pb-8">
-          {children}
-        </main>
+        <main className="flex-1 px-4 pb-24 pt-6 sm:pb-8">{children}</main>
       </div>
 
       <BottomTabs active={activeTab} onChange={onTabChange} labels={labels} />

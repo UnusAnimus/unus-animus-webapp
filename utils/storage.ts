@@ -10,7 +10,7 @@ export const loadProgress = (): UserProgress => {
       return { ...INITIAL_USER_STATE, ...JSON.parse(stored) };
     }
   } catch (e) {
-    console.error("Failed to load progress", e);
+    console.error('Failed to load progress', e);
   }
   return INITIAL_USER_STATE;
 };
@@ -19,6 +19,6 @@ export const saveProgress = (progress: UserProgress) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   } catch (e) {
-    console.error("Failed to save progress", e);
+    console.error('Failed to save progress', e);
   }
 };

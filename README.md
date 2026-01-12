@@ -10,8 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1TzCsvN5_ddHchQ2Ts5UPbh
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js (LTS recommended, e.g. Node 20)
 
 1. Install dependencies:
    `npm install`
@@ -23,8 +22,39 @@ View your app in AI Studio: https://ai.studio/apps/drive/1TzCsvN5_ddHchQ2Ts5UPbh
    `npm run dev:full`
 
 This starts:
+
 - Web (Vite): http://localhost:3000/
 - AI proxy (Express): http://localhost:8787/health
+
+### Scripts
+
+- `npm run dev`: frontend only (Vite)
+- `npm run dev:full`: frontend + AI proxy (recommended for local dev)
+- `npm run build`: production build (outputs `dist/`)
+- `npm run preview`: preview the production build
+- `npm run typecheck`: TypeScript typecheck (no emit)
+- `npm run lint`: ESLint
+- `npm run format`: Prettier write
+- `npm run format:check`: Prettier check
+
+## Environment variables
+
+This repo intentionally keeps API keys **server-side** (AI proxy). Do **not** put secrets into Vite `VITE_*` vars.
+
+### AI proxy (Node / Express)
+
+Defined via `.env.local` or host environment variables.
+
+- `OPENAI_API_KEY`: if set, proxy uses OpenAI
+- `OPENAI_MODEL`: OpenAI model name (default `gpt-4o-mini`)
+- `GEMINI_API_KEY`: fallback if no OpenAI key is set
+- `PORT`: proxy port (default `8787`)
+
+### Frontend (Vite)
+
+- `VITE_AI_PROXY_URL`: optional base URL for the AI proxy.
+  - Default: `http://localhost:8787`
+  - Example (production): `https://api.example.com`
 
 ### Windows: start script
 
@@ -83,5 +113,22 @@ Alias /kybalion-path "c:/xampp/htdocs/kybalion-path/dist"
    AllowOverride All
    Require all granted
 </Directory>
+
+## Production / Deploy notes
+
+### Option A: Static frontend only (no AI features)
+
+Build and serve the contents of `dist/` from any static host.
+
+### Option B: Static frontend + AI proxy
+
+You need two deployments:
+
+1) Frontend: build with Vite and serve `dist/`.
+- Configure the frontend to point to your proxy by setting `VITE_AI_PROXY_URL` at build time.
+
+2) AI proxy: run `node server/index.mjs` on a server.
+- Provide `OPENAI_API_KEY` or `GEMINI_API_KEY` via environment variables.
+- Put it behind a reverse proxy (nginx/Apache) and expose `/health` for simple monitoring.
 
 ```

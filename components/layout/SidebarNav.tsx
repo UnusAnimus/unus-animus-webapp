@@ -14,8 +14,7 @@ type SidebarNavProps = {
 };
 
 export function SidebarNav({ active, onChange, labels }: SidebarNavProps) {
-  const itemBase =
-    'flex items-center gap-3 rounded-2xl px-3 py-2 font-semibold transition-colors';
+  const itemBase = 'flex items-center gap-3 rounded-2xl px-3 py-2 font-semibold transition-colors';
 
   return (
     <aside className="hidden w-64 flex-shrink-0 px-4 py-5 sm:block">
