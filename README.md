@@ -58,6 +58,7 @@ If you configure WordPress JWT env vars, the app becomes **members-only** and th
 - `WP_JWT_PUBLIC_KEY`: public key PEM for RS256 tokens (server-side)
 - `WP_JWT_ISSUER`: optional JWT issuer check
 - `WP_JWT_AUDIENCE`: optional JWT audience check
+- `WP_JWT_VALIDATE_URL`: optional token validation endpoint (miniOrange). Can be used to enrich missing roles and as a fallback validator.
 - `FRONTEND_ORIGINS`: comma-separated list of allowed frontend origins for CORS (localhost is always allowed in dev)
 
 ### Frontend (Vite)

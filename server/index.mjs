@@ -28,6 +28,7 @@ const WP_JWT_SECRET = process.env.WP_JWT_SECRET;
 const WP_JWT_PUBLIC_KEY = process.env.WP_JWT_PUBLIC_KEY;
 const WP_JWT_ISSUER = process.env.WP_JWT_ISSUER;
 const WP_JWT_AUDIENCE = process.env.WP_JWT_AUDIENCE;
+const WP_JWT_VALIDATE_URL = process.env.WP_JWT_VALIDATE_URL;
 
 const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGINS || '')
   .split(',')
@@ -77,6 +78,149 @@ const normalizeRoles = rawRoles => {
   return Array.from(roles);
 };
 
+const decodeJwtPayloadUnsafe = token => {
+  try {
+    const parts = String(token).split('.');
+    if (parts.length < 2) return null;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    const json = Buffer.from(payload, 'base64').toString('utf8');
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
+const pickFirst = (...values) => {
+  for (const v of values) {
+    if (v !== undefined && v !== null && v !== '') return v;
+  }
+  return undefined;
+};
+
+const fetchMiniOrangeValidation = async token => {
+  if (!WP_JWT_VALIDATE_URL) throw new Error('missing_validate_url');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(WP_JWT_VALIDATE_URL, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      signal: controller.signal,
+    });
+
+    const text = await res.text().catch(() => '');
+    let data;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+
+    if (!res.ok) {
+      throw new Error(`validate_http_${res.status}`);
+    }
+
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const extractRolesFromValidation = data => {
+  const rawRoles = pickFirst(
+    data?.roles,
+    data?.role,
+    data?.wp_roles,
+    data?.user_roles,
+    data?.data?.roles,
+    data?.data?.role,
+    data?.data?.wp_roles,
+    data?.data?.user_roles,
+    data?.user?.roles,
+    data?.user?.role,
+    data?.user?.wp_roles,
+    data?.user?.user_roles,
+    data?.data?.user?.roles,
+    data?.data?.user?.role,
+    data?.data?.user?.wp_roles,
+    data?.data?.user?.user_roles
+  );
+  return normalizeRoles(rawRoles);
+};
+
+const extractUserFromValidation = (data, token) => {
+  const unsafe = decodeJwtPayloadUnsafe(token) || {};
+
+  const wpUserId =
+    String(
+      pickFirst(
+        data?.sub,
+        data?.user_id,
+        data?.id,
+        data?.wp_user_id,
+        data?.data?.sub,
+        data?.data?.user_id,
+        data?.data?.id,
+        data?.data?.wp_user_id,
+        data?.user?.id,
+        data?.user?.user_id,
+        data?.data?.user?.id,
+        data?.data?.user?.user_id,
+        unsafe?.sub,
+        unsafe?.user_id,
+        unsafe?.id,
+        unsafe?.wp_user_id
+      ) || ''
+    ).trim() || null;
+
+  const email = pickFirst(
+    data?.email,
+    data?.user_email,
+    data?.data?.email,
+    data?.data?.user_email,
+    data?.user?.email,
+    data?.user?.user_email,
+    data?.data?.user?.email,
+    data?.data?.user?.user_email,
+    unsafe?.email,
+    unsafe?.user_email
+  );
+
+  const name = pickFirst(
+    data?.name,
+    data?.display_name,
+    data?.user_display_name,
+    data?.data?.name,
+    data?.data?.display_name,
+    data?.data?.user_display_name,
+    data?.user?.name,
+    data?.user?.display_name,
+    data?.data?.user?.name,
+    data?.data?.user?.display_name,
+    unsafe?.name,
+    unsafe?.display_name,
+    unsafe?.user_display_name
+  );
+
+  const roles = extractRolesFromValidation(data);
+
+  const exp = pickFirst(data?.exp, data?.data?.exp, unsafe?.exp);
+
+  return {
+    wpUserId,
+    email: typeof email === 'string' ? email : undefined,
+    name: typeof name === 'string' ? name : undefined,
+    roles,
+    exp: typeof exp === 'number' ? exp : undefined,
+  };
+};
+
 const verifyWordpressJwt = async token => {
   if (!token) throw new Error('missing_token');
 
@@ -89,6 +233,12 @@ const verifyWordpressJwt = async token => {
   } else if (WP_JWT_SECRET) {
     key = new TextEncoder().encode(WP_JWT_SECRET);
     algorithms = ['HS256', 'HS384', 'HS512'];
+  } else if (WP_JWT_VALIDATE_URL) {
+    // Fallback: trust WordPress/miniOrange validation endpoint if no local key is available.
+    const data = await fetchMiniOrangeValidation(token);
+    const user = extractUserFromValidation(data, token);
+    if (!user.wpUserId) throw new Error('missing_user');
+    return user;
   } else {
     throw new Error('missing_jwt_key');
   }
@@ -100,7 +250,7 @@ const verifyWordpressJwt = async token => {
   });
 
   const rawRoles = payload.roles ?? payload.role ?? payload.wp_roles ?? payload.user_roles;
-  const roles = normalizeRoles(rawRoles);
+  let roles = normalizeRoles(rawRoles);
 
   const wpUserId =
     String(payload.sub ?? payload.wp_user_id ?? payload.user_id ?? payload.id ?? '').trim() || null;
@@ -108,6 +258,17 @@ const verifyWordpressJwt = async token => {
 
   const email = payload.email ?? payload.user_email;
   const name = payload.name ?? payload.user_display_name ?? payload.display_name;
+
+  // Enrich roles via miniOrange token validation if roles are missing.
+  if (roles.length === 0 && WP_JWT_VALIDATE_URL) {
+    try {
+      const data = await fetchMiniOrangeValidation(token);
+      const enriched = extractRolesFromValidation(data);
+      if (enriched.length) roles = enriched;
+    } catch {
+      // ignore enrichment errors
+    }
+  }
 
   return {
     wpUserId,
@@ -268,7 +429,7 @@ const simulateEvaluation = (text, language) => {
 
 app.post('/api/evaluate-reflection', async (req, res) => {
   // If JWT auth is configured, require a valid member token.
-  const authConfigured = Boolean(WP_JWT_SECRET || WP_JWT_PUBLIC_KEY);
+  const authConfigured = Boolean(WP_JWT_SECRET || WP_JWT_PUBLIC_KEY || WP_JWT_VALIDATE_URL);
   if (authConfigured) {
     const token = parseBearerToken(req);
     if (!token) {
